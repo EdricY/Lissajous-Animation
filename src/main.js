@@ -67,14 +67,15 @@ export default class LissajousAnimator {
     let w = this.canvas.width;
     let h = this.canvas.height;
     let { a, b, head, tail, ctx, textCtx, crossCtx, maskCtx } = this
+    window.ctx = ctx;
     tail.x = head.x;
     tail.y = head.y;
     head.x = (w/2) + (w/2.3)*Math.sin(b*t/5000);
     head.y = (h/2) + (h/2.3)*Math.cos(a*t/5000);
 
-    ctx.fillStyle = 'rgba(0,0,0,.2)';
+    ctx.globalCompositeOperation = "source-over";
+    ctx.fillStyle = 'rgba(0,0,0,.1)';
     ctx.fillRect(0, 0, w, h);
-    
     
     textCtx.clearRect(0, 0, w, h);
     textCtx.fillText(getCurrentTimeString(), w/2, h/2);
@@ -89,13 +90,28 @@ export default class LissajousAnimator {
     maskCtx.fillRect(0, 0, w, h);
     maskCtx.globalCompositeOperation = "destination-in";
     maskCtx.drawImage(this.crossCanvas, 0, 0);
+    maskCtx.globalCompositeOperation = "difference";
+    maskCtx.drawImage(this.crossCanvas, 0, 0);
 
-    crossCtx.globalCompositeOperation = "difference";
-    crossCtx.drawImage(this.maskCanvas, 0, 0);
+    crossCtx.globalCompositeOperation = "copy";
+    crossCtx.drawImage(this.maskCanvas, 0, 0)
     
     this.ctx.drawImage(this.crossCanvas, 0, 0);
-    this.drawHeadTailLine(ctx);
 
+
+    maskCtx.globalCompositeOperation = "source-over";
+    maskCtx.fillStyle = '#000100';
+    maskCtx.fillRect(0, 0, w, h);
+    maskCtx.globalCompositeOperation = "destination-in";
+    maskCtx.drawImage(this.canvas, 0, 0);
+    maskCtx.globalCompositeOperation = "difference";
+    maskCtx.drawImage(this.canvas, 0, 0);
+    
+    ctx.globalCompositeOperation = "copy";
+    ctx.drawImage(this.maskCanvas, 0, 0);
+    
+    ctx.globalCompositeOperation = "source-over";
+    this.drawHeadTailLine(ctx);
 
     requestAnimationFrame(t => this.animate(t));
   }
