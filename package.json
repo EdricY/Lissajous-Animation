@@ -1,0 +1,41 @@
+{
+  "name": "lissajous-canvas-animation",
+  "version": "0.0.0",
+  "description": "Draw triangles over an image to create a cool effect",
+  "main": "dist/tessellator.es.js",
+  "scripts": {
+    "serve": "webpack-dev-server",
+    "build": "webpack",
+    "build:prod": "webpack -p"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EdricY/Lissajous-Animation.git"
+  },
+  "keywords": [
+    "lissajous",
+    "curve",
+    "animation",
+    "animate",
+    "animator",
+    "canvas",
+    "picture",
+    "screen",
+    "saver",
+    "screensaver"
+  ],
+  "author": "EdricY",
+  "contributors": [
+    "EdricY"
+  ],
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/EdricY/Lissajous-Animation/issues"
+  },
+  "homepage": "https://github.com/EdricY/Lissajous-Animation#readme",
+  "devDependencies": {
+    "webpack": "^4.42.1",
+    "webpack-cli": "^3.3.11",
+    "webpack-dev-server": "^3.10.3"
+  }
+}
