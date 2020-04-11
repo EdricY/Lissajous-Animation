@@ -14,7 +14,7 @@ if (!window.OffscreenCanvas) {
   };
 }
 
-let inverted = true;
+let inverted = false;
 
 let tickDur = 16;
 let lastTick = 0;
@@ -40,6 +40,9 @@ export default class LissajousAnimator {
     let crossCanvas = new OffscreenCanvas(w, h);
     this.crossCtx = crossCanvas.getContext("2d");
 
+    let fadeCanvas = new OffscreenCanvas(w, h);
+    this.fadeCtx = fadeCanvas.getContext("2d"); //to handle fade for crossCanvas
+
     let maskCanvas = new OffscreenCanvas(w, h);
     this.maskCtx = maskCanvas.getContext("2d");
 
@@ -57,6 +60,10 @@ export default class LissajousAnimator {
     })
 
     inverted = options.inverted == true;
+    if (!inverted) {
+      let trailCanvas = new OffscreenCanvas(w, h);
+      this.trailCtx = trailCanvas.getContext("2d");
+    }
   }
 
   playAnimation() {
@@ -68,7 +75,8 @@ export default class LissajousAnimator {
   }
 
   animate(t) {
-    let { a, b, w, h, ctx, textCtx, crossCtx, maskCtx } = this
+    let { a, b, w, h, ctx, textCtx, crossCtx, maskCtx, fadeCtx } = this
+    // window.ctx = ctx;
 
     if (this.beginning) {
       this.head.x = (w/2) + (w/2.3)*Math.sin(b*t/5000);
@@ -87,7 +95,6 @@ export default class LissajousAnimator {
     this.count++;
 
     lastTick = t;
-    // window.ctx = ctx;
     this.tail.x = this.head.x;
     this.tail.y = this.head.y;
     this.head.x = (w/2) + (w/2.3)*Math.sin(b*t/5000);
@@ -107,18 +114,25 @@ export default class LissajousAnimator {
     this.drawHeadTailLine(crossCtx);
     crossCtx.globalCompositeOperation = "destination-in";
     crossCtx.drawImage(textCtx.canvas, 0, 0);
-    ctx.globalCompositeOperation = "source-over";
-    this.ctx.drawImage(crossCtx.canvas, 0, 0);
 
-    subtract(ctx, "#000001", maskCtx);
+    fadeCtx.globalCompositeOperation = "source-over"
+    fadeCtx.drawImage(crossCtx.canvas, 0, 0);
+    subtract(fadeCtx, "#000001", maskCtx);
 
-    ctx.globalCompositeOperation = "source-over";
+    ctx.clearRect(0, 0, w, h)
+    ctx.globalCompositeOperation = "copy";
+    ctx.drawImage(fadeCtx.canvas, 0, 0);
     
     if (!inverted) {
-      //TODO: find better way to draw trail
-      ctx.globalAlpha = .1;
-      this.drawHeadTailLine(ctx);
-      ctx.globalAlpha = 1;
+      this.trailCtx.globalAlpha = 1;
+      this.trailCtx.globalCompositeOperation = "source-over";
+      this.drawHeadTailLine(this.trailCtx);
+      this.trailCtx.globalCompositeOperation = "destination-out";
+      this.trailCtx.fillStyle = "rgba(0,0,0,.1)";
+      this.trailCtx.fillRect(0, 0, w, h);
+
+      ctx.globalCompositeOperation = "source-over"
+      ctx.drawImage(this.trailCtx.canvas, 0, 0);
     }
 
     requestAnimationFrame(t => this.animate(t));
@@ -151,8 +165,10 @@ function subtract(ctx, subColor, tempCtx) {
   tempCtx.globalCompositeOperation = "difference";
   tempCtx.drawImage(ctx.canvas, 0, 0);
 
+  ctx.save();
   ctx.globalCompositeOperation = "copy";
   ctx.drawImage(tempCtx.canvas, 0, 0);
+  ctx.restore();
 }
 
 function getCurrentTimeString() {
