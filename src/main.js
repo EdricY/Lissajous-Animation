@@ -55,6 +55,8 @@ export default class LissajousAnimator {
     canvas.addEventListener("click", e => {
       logPixel(this.ctx, e.clientX, e.clientY)
     })
+
+    inverted = options.inverted == true;
   }
 
   playAnimation() {
@@ -106,15 +108,19 @@ export default class LissajousAnimator {
     crossCtx.drawImage(textCtx.canvas, 0, 0);
 
     subtract(crossCtx, "#000001", maskCtx);
-
-    crossCtx.globalCompositeOperation = "copy";
-    crossCtx.drawImage(maskCtx.canvas, 0, 0)
-    
+    ctx.globalCompositeOperation = inverted ? "copy" : "source-over";
+    // if not inverted, we need to keep the existing trail
     this.ctx.drawImage(crossCtx.canvas, 0, 0);
 
-    ctx.globalCompositeOperation = "copy";
-    ctx.drawImage(maskCtx.canvas, 0, 0);
-    
+    if (!inverted) { // make trail
+      ctx.save();
+      ctx.globalAlpha = .1;
+      ctx.globalCompositeOperation = "source-atop";
+      ctx.fillStyle = "black"
+      ctx.fillRect(0, 0, w, h);
+      ctx.restore();
+    }
+
     ctx.globalCompositeOperation = "source-over";
     this.drawHeadTailLine(ctx);
 
@@ -148,6 +154,7 @@ function subtract(ctx, subColor, tempCtx) {
   tempCtx.globalCompositeOperation = "difference";
   tempCtx.drawImage(ctx.canvas, 0, 0);
 
+  ctx.globalCompositeOperation = "copy";
   ctx.drawImage(tempCtx.canvas, 0, 0);
 }
 
