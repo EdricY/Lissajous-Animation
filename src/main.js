@@ -97,32 +97,29 @@ export default class LissajousAnimator {
     textCtx.globalCompositeOperation = "source-over";
     if (inverted) {
       textCtx.fillStyle = "white";
-      textCtx.fillRect(0,0,w,h)
+      textCtx.fillRect(0, 0, w, h)
       textCtx.globalCompositeOperation = "destination-out";
     }
     textCtx.fillText(getCurrentTimeString(), w/2, h/2);
 
+    crossCtx.clearRect(0, 0, w, h)
     crossCtx.globalCompositeOperation = "source-over";
     this.drawHeadTailLine(crossCtx);
     crossCtx.globalCompositeOperation = "destination-in";
     crossCtx.drawImage(textCtx.canvas, 0, 0);
-
-    subtract(crossCtx, "#000001", maskCtx);
-    ctx.globalCompositeOperation = inverted ? "copy" : "source-over";
-    // if not inverted, we need to keep the existing trail
+    ctx.globalCompositeOperation = "source-over";
     this.ctx.drawImage(crossCtx.canvas, 0, 0);
 
-    if (!inverted) { // make trail
-      ctx.save();
-      ctx.globalAlpha = .1;
-      ctx.globalCompositeOperation = "source-atop";
-      ctx.fillStyle = "black"
-      ctx.fillRect(0, 0, w, h);
-      ctx.restore();
-    }
+    subtract(ctx, "#000001", maskCtx);
 
     ctx.globalCompositeOperation = "source-over";
-    this.drawHeadTailLine(ctx);
+    
+    if (!inverted) {
+      //TODO: find better way to draw trail
+      ctx.globalAlpha = .1;
+      this.drawHeadTailLine(ctx);
+      ctx.globalAlpha = 1;
+    }
 
     requestAnimationFrame(t => this.animate(t));
   }
@@ -162,7 +159,7 @@ function getCurrentTimeString() {
   let now = new Date();
   let hh = now.getHours().toString().padStart(2, '0');
   let mm = now.getMinutes().toString().padStart(2, '0')
-  // let mm = now.getSeconds().toString().padStart(2, '0')
+  // mm = now.getSeconds().toString().padStart(2, '0')
   return `${hh}:${mm}`;
 }
 
