@@ -1,5 +1,4 @@
 import Point from "./point";
-import MathHelp from "./mathhelp";
 
 // delete window.OffscreenCanvas;
 
@@ -14,16 +13,20 @@ if (!window.OffscreenCanvas) {
   };
 }
 
-const color = "#00FCC0"
-const colorStep = "#000101" // for non-inverted, color should be divisble by step * 4
+const color = "#FCFCFC"
+const colorStep = "#030101" // for non-inverted, color should be divisble by step * 4
 
 let inverted = false;
-
+let radius = 50;
+let padding = 10;
 let tickDur = 16;
 let lastTick = 0;
+let raf = null;
 export default class LissajousAnimator {
   constructor(canvas, options) {
-    let osCanvas = canvas.transferControlToOffscreen();
+    let osCanvas;
+    try { osCanvas = canvas.transferControlToOffscreen() }
+    catch { osCanvas = canvas }
     this.w = canvas.clientWidth
     this.h = canvas.clientHeight;
     let { w, h } = this;
@@ -33,11 +36,11 @@ export default class LissajousAnimator {
     
     this.ctx = osCanvas.getContext("2d");
 
-    tempCtx = new OffscreenCanvas(w, h).getContext("2d")
+    this.tempCtx = new OffscreenCanvas(w, h).getContext("2d")
 
     let textCanvas = new OffscreenCanvas(w, h);
     this.textCtx = textCanvas.getContext("2d");
-    this.textCtx.font = getFontSize("00:00", .1);
+    this.textCtx.font = this.getFontSize("00:00", .1);
     this.textCtx.textAlign = "center";
     this.textCtx.textBaseline = "middle";
     this.textCtx.fillStyle = "red";
@@ -52,15 +55,9 @@ export default class LissajousAnimator {
     this.head = new Point();
     this.tail = new Point();
     
-    // this.a = MathHelp.randInt(5, 30);
-    // this.b = MathHelp.randInt(5, 30);
-    // if (this.b > this.a) { //swap
-    //   this.a = this.b ^ this.a;
-    //   this.b = this.b ^ this.a;
-    //   this.a = this.b ^ this.a;
-    // } 
-    this.a = 22;
-    this.b = 21;
+    // TODO: better a/b selection
+    this.a = Math.random();
+    this.b = 1;
     console.log(this.a, this.b)
     this.playAnimation()
     this.count = 0;
@@ -77,27 +74,30 @@ export default class LissajousAnimator {
     })
   }
 
+  setHeadPosition(t) {
+    this.head.x = (this.w/2) + (this.w/2 - radius - padding)*Math.sin(this.b*t/250);
+    this.head.y = (this.h/2) + (this.h/2 - radius - padding)*Math.cos(this.a*t/250);
+  }
+
   playAnimation() {
     this.beginning = true;
-
-    requestAnimationFrame(t => this.animate(t));
+    if (raf !== null) cancelAnimationFrame(raf)
+    raf = requestAnimationFrame(t => this.animate(t));
   }
 
   animate(t) {
-    let { a, b, w, h, ctx, textCtx, crossCtx, fadeCtx } = this
-
+    let { w, h, ctx, textCtx, crossCtx, fadeCtx } = this
     if (this.beginning) {
-      this.head.x = (w/2) + (w/2.3)*Math.sin(b*t/5000);
-      this.head.y = (h/2) + (h/2.3)*Math.cos(a*t/5000);
+      this.setHeadPosition(t)
       this.tail.x = this.head.x;
       this.tail.y = this.head.y;
       this.beginning = false;
-      requestAnimationFrame(t => this.animate(t));
+      raf = requestAnimationFrame(t => this.animate(t));
       return;
     }
 
     if (t - lastTick < tickDur || this.beginning) {
-      requestAnimationFrame(t => this.animate(t));
+      raf = requestAnimationFrame(t => this.animate(t));
       return;
     }
     this.count++;
@@ -105,9 +105,8 @@ export default class LissajousAnimator {
     lastTick = t;
     this.tail.x = this.head.x;
     this.tail.y = this.head.y;
-    this.head.x = (w/2) + (w/2.3)*Math.sin(b*t/5000);
-    this.head.y = (h/2) + (h/2.3)*Math.cos(a*t/5000);
-    
+    this.setHeadPosition(t);
+  
     textCtx.clearRect(0, 0, w, h);
     textCtx.globalCompositeOperation = "source-over";
     if (inverted) {
@@ -127,7 +126,7 @@ export default class LissajousAnimator {
     fadeCtx.globalCompositeOperation = "source-over"
     fadeCtx.drawImage(crossCtx.canvas, 0, 0);
 
-    diffTwice(fadeCtx, colorStep); //I think this operation needs to happen on the combo of fadeCtx and trailCtx?
+    this.diffTwice(fadeCtx, colorStep);
     ctx.clearRect(0, 0, w, h)
     ctx.globalCompositeOperation = "source-over";
     ctx.drawImage(fadeCtx.canvas, 0, 0);
@@ -137,50 +136,64 @@ export default class LissajousAnimator {
       this.trailCtx.globalCompositeOperation = "source-over";
       this.drawHeadTailLine(this.trailCtx);
 
-      diffTwice(this.trailCtx, colorStep);
-      diffTwice(this.trailCtx, colorStep);
-      diffTwice(this.trailCtx, colorStep);
+      this.diffTwice(this.trailCtx, colorStep);
+      this.diffTwice(this.trailCtx, colorStep);
+      this.diffTwice(this.trailCtx, colorStep);
 
       ctx.globalCompositeOperation = "lighten";
       ctx.drawImage(this.trailCtx.canvas, 0, 0);
     }
 
-    
-    
-    requestAnimationFrame(t => this.animate(t));
+    raf = requestAnimationFrame(t => this.animate(t));
   }
 
   drawHeadTailLine(ctx) {
     ctx.beginPath();
     ctx.strokeStyle = color;
-    ctx.lineWidth = 100;
+    ctx.lineWidth = radius * 2;
     ctx.lineJoin = "round"
     ctx.lineCap = "round"
     ctx.moveTo(this.head.x, this.head.y)
     ctx.lineTo(this.tail.x, this.tail.y)
     ctx.stroke();
   }
+
+  // Diffs subColor from ctx's canvas twice.
+  // Where color is 0, it stays 0 (difference operation takes absolute value) 
+  diffTwice(ctx, subColor) {
+    let tempCtx = this.tempCtx;
+    let w = ctx.canvas.width;
+    let h = ctx.canvas.height;
+    tempCtx.clearRect(0, 0, w, h)
+    tempCtx.globalCompositeOperation = "source-over";
+    tempCtx.fillStyle = subColor;
+    tempCtx.drawImage(ctx.canvas, 0, 0);
+    tempCtx.globalCompositeOperation = "source-in";
+    tempCtx.fillRect(0, 0, w, h);
+  
+    ctx.save();
+    ctx.globalCompositeOperation = "difference";  
+    ctx.drawImage(tempCtx.canvas, 0, 0);
+    ctx.drawImage(tempCtx.canvas, 0, 0);
+    ctx.restore();
+  }
+
+  getFontSize(text, margin) {
+    let tempCtx = this.tempCtx;
+
+    if (margin < 1) margin = tempCtx.canvas.width * margin;
+    const margin2 = margin*2;
+    let size = 1000;
+    let tm;
+    do {
+      tempCtx.font = (size--) + "px monospace";
+      tm = tempCtx.measureText(text);
+    } while (tm.width > tempCtx.canvas.width - margin2)
+  
+    return tempCtx.font;
+  }
 }
 
-let tempCtx;
-// Diffs subColor from ctx's canvas twice.
-// Where color is 0, it stays 0 (difference operation takes absolute value) 
-function diffTwice(ctx, subColor) {
-  let w = ctx.canvas.width;
-  let h = ctx.canvas.height;
-  tempCtx.clearRect(0, 0, w, h)
-  tempCtx.globalCompositeOperation = "source-over";
-  tempCtx.fillStyle = subColor;
-  tempCtx.drawImage(ctx.canvas, 0, 0);
-  tempCtx.globalCompositeOperation = "source-in";
-  tempCtx.fillRect(0, 0, w, h);
-
-  ctx.save();
-  ctx.globalCompositeOperation = "difference";  
-  ctx.drawImage(tempCtx.canvas, 0, 0);
-  ctx.drawImage(tempCtx.canvas, 0, 0);
-  ctx.restore();
-}
 
 //unused
 function fade(ctx, amount) {
@@ -208,19 +221,6 @@ function getCurrentTimeString() {
 function logPixel(ctx, x, y) {
   let arr = ctx.getImageData(x, y, 1, 1).data;
   console.log(arr);
-}
-
-function getFontSize(text, margin) {
-  if (margin < 1) margin = tempCtx.canvas.width * margin;
-  const margin2 = margin*2;
-  let size = 1000;
-  let tm;
-  do {
-    tempCtx.font = (size--) + "px monospace";
-    tm = tempCtx.measureText(text);
-  } while (tm.width > tempCtx.canvas.width - margin2)
-
-  return tempCtx.font;
 }
 
 if (process.browser) window.LissajousAnimator = LissajousAnimator;
