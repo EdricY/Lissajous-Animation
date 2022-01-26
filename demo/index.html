@@ -18,23 +18,28 @@
 </body>
 <script src="../dist/lissajous.js"></script>
 <script>
+  const oneOrTwo = () => Math.round(Math.random()) + 1;
+  const newLissaInstance = () =>
+    new LissajousAnimator(canvas, {
+      inverted: true,
+      colorStep: `#0${oneOrTwo()}0${oneOrTwo()}0${oneOrTwo()}`,
+    });
+
   const body = document.getElementById("body");
-let canvas = document.getElementById("canvas");
-let lissa = new LissajousAnimator(canvas, {inverted: Math.random() > .5})
+  let canvas = document.getElementById("canvas");
+  let lissa = newLissaInstance();
 
-let timeout = null;
-window.addEventListener("resize", () => {
-  clearTimeout(timeout);
-  timeout = setTimeout(handleResize, 500)
-  
-});
+  let timeout = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(timeout);
+    timeout = setTimeout(handleResize, 500);
+  });
 
-function handleResize() {
-  const clone = canvas.cloneNode()
-  body.append(clone);
-  canvas.remove()
-  canvas = clone;
-  lissa = new LissajousAnimator(canvas, {inverted: Math.random() > .5})
-
-}
+  function handleResize() {
+    const clone = canvas.cloneNode();
+    body.append(clone);
+    canvas.remove();
+    canvas = clone;
+    lissa = newLissaInstance();
+  }
 </script>
